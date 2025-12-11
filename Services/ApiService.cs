@@ -11,7 +11,7 @@ namespace clientAPP.Services
     public class ApiService : IApiService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://localhost:7212/api";
+        private const string BaseUrl = "https://localhost:7212/api/Techno-FIx";
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true
