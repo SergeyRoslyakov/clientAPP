@@ -11,7 +11,7 @@ namespace clientAPP.Services
     public class ApiService : IApiService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://localhost:7212/api/Techno-Fix";
+        private const string BaseUrl = "https://localhost:7212/api";
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true
@@ -27,6 +27,115 @@ namespace clientAPP.Services
                 new MediaTypeWithQualityHeaderValue("application/json"));
         }
 
+        // Аутентификация
+        public async Task<AuthResponseDto> LoginAsync(string email, string password)
+        {
+            try
+            {
+                var loginDto = new LoginRequestDto { Email = email, Password = password };
+                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/auth/login", loginDto);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var authResponse = await response.Content.ReadFromJsonAsync<AuthResponseDto>(_jsonOptions);
+
+                    if (authResponse != null && !string.IsNullOrEmpty(authResponse.Token))
+                    {
+                        // Сохраняем токен и данные пользователя
+                        await SecureStorage.SetAsync("auth_token", authResponse.Token);
+                        await SecureStorage.SetAsync("user_email", authResponse.User.Email);
+                        await SecureStorage.SetAsync("user_role", authResponse.User.Role);
+                        await SecureStorage.SetAsync("user_name", authResponse.User.Username);
+
+                        return authResponse;
+                    }
+                }
+
+                // Если ошибка, возвращаем пустой объект
+                return new AuthResponseDto();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Login error: {ex.Message}");
+                return new AuthResponseDto();
+            }
+        }
+
+        public async Task<AuthResponseDto> RegisterAsync(string username, string email, string password, string role = "User")
+        {
+            try
+            {
+                var registerDto = new RegisterRequestDto
+                {
+                    Username = username,
+                    Email = email,
+                    Password = password,
+                    Role = role
+                };
+
+                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/auth/register", registerDto);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    return await response.Content.ReadFromJsonAsync<AuthResponseDto>(_jsonOptions)
+                        ?? new AuthResponseDto();
+                }
+
+                return new AuthResponseDto();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Register error: {ex.Message}");
+                return new AuthResponseDto();
+            }
+        }
+
+        public async Task<User> GetCurrentUserAsync()
+        {
+            try
+            {
+                var token = await SecureStorage.GetAsync("auth_token");
+                var email = await SecureStorage.GetAsync("user_email");
+                var role = await SecureStorage.GetAsync("user_role");
+                var name = await SecureStorage.GetAsync("user_name");
+
+                if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(email))
+                {
+                    return new User
+                    {
+                        Email = email,
+                        Role = role ?? "User",
+                        Username = name ?? "Пользователь"
+                    };
+                }
+
+                return new User();
+            }
+            catch
+            {
+                return new User();
+            }
+        }
+
+        public async Task<bool> IsAuthenticatedAsync()
+        {
+            var token = await SecureStorage.GetAsync("auth_token");
+            return !string.IsNullOrEmpty(token);
+        }
+
+        public void Logout()
+        {
+            try
+            {
+                SecureStorage.Remove("auth_token");
+                SecureStorage.Remove("user_email");
+                SecureStorage.Remove("user_role");
+                SecureStorage.Remove("user_name");
+            }
+            catch { }
+        }
+
+        // Устройства (с авторизацией)
         public async Task<List<DeviceModel>> GetDevicesAsync(string search = null)
         {
             try
@@ -46,11 +155,17 @@ namespace clientAPP.Services
                     return await response.Content.ReadFromJsonAsync<List<DeviceModel>>(_jsonOptions)
                         ?? new List<DeviceModel>();
                 }
+                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    // Если не авторизован
+                    await Shell.Current.DisplayAlert("Ошибка", "Требуется авторизация", "OK");
+                }
 
                 return new List<DeviceModel>();
             }
-            catch
+            catch (Exception ex)
             {
+                System.Diagnostics.Debug.WriteLine($"GetDevices error: {ex.Message}");
                 return new List<DeviceModel>();
             }
         }
@@ -116,42 +231,6 @@ namespace clientAPP.Services
             }
             catch { }
         }
-        public async Task<bool> LoginAsync(string email, string password)
-        {
-            try
-            {
-                var loginData = new { email, password };
-                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/auth/login", loginData);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var json = await response.Content.ReadAsStringAsync();
-                    var jsonDoc = JsonDocument.Parse(json);
-
-                    if (jsonDoc.RootElement.TryGetProperty("token", out var tokenElement))
-                    {
-                        var token = tokenElement.GetString();
-                        await SecureStorage.SetAsync("auth_token", token);
-                        return true;
-                    }
-                }
-                return false;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        public void Logout()
-        {
-            SecureStorage.Remove("auth_token");
-        }
-
-        public async Task<Models.User> GetCurrentUserAsync()
-        {
-            return new Models.User();
-        }
 
         private async Task SetAuthHeader()
         {
@@ -160,6 +239,10 @@ namespace clientAPP.Services
             {
                 _httpClient.DefaultRequestHeaders.Authorization =
                     new AuthenticationHeaderValue("Bearer", token);
+            }
+            else
+            {
+                _httpClient.DefaultRequestHeaders.Authorization = null;
             }
         }
     }

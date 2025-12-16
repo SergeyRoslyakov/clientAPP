@@ -13,6 +13,7 @@ namespace clientAPP.ViewModels
     {
         private readonly IApiService _apiService;
         private string _userName = string.Empty;
+        private string _userRole = string.Empty;
 
         public string UserName
         {
@@ -20,7 +21,14 @@ namespace clientAPP.ViewModels
             set => SetProperty(ref _userName, value);
         }
 
+        public string UserRole
+        {
+            get => _userRole;
+            set => SetProperty(ref _userRole, value);
+        }
+
         public ICommand LogoutCommand { get; }
+        public ICommand NavigateToClientsCommand { get; }
         public ICommand NavigateToDevicesCommand { get; }
 
         public MainViewModel(IApiService apiService)
@@ -29,7 +37,17 @@ namespace clientAPP.ViewModels
             Title = "Главная";
 
             LogoutCommand = new Command(Logout);
+            NavigateToClientsCommand = new Command(async () => await NavigateTo("ClientsPage"));
             NavigateToDevicesCommand = new Command(async () => await NavigateTo("DevicesPage"));
+
+            LoadUserData();
+        }
+
+        private async void LoadUserData()
+        {
+            var user = await _apiService.GetCurrentUserAsync();
+            UserName = !string.IsNullOrEmpty(user.Username) ? user.Username : "Пользователь";
+            UserRole = !string.IsNullOrEmpty(user.Role) ? user.Role : "User";
         }
 
         private void Logout()
@@ -40,7 +58,17 @@ namespace clientAPP.ViewModels
 
         private async Task NavigateTo(string page)
         {
-            await Shell.Current.GoToAsync(page);
+            // Проверяем авторизацию перед навигацией
+            var isAuthenticated = await _apiService.IsAuthenticatedAsync();
+            if (isAuthenticated)
+            {
+                await Shell.Current.GoToAsync(page);
+            }
+            else
+            {
+                await Shell.Current.DisplayAlert("Ошибка", "Требуется авторизация", "OK");
+                await Shell.Current.GoToAsync("//LoginPage");
+            }
         }
     }
 }

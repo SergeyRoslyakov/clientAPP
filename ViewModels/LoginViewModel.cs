@@ -1,11 +1,12 @@
-﻿using System;
+﻿using clientAPP.Models;
+using clientAPP.Services;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Text;
 using System.Threading.Tasks;
-using clientAPP.Services;
-using clientAPP.Models;
+using System.Windows.Input;
 
 
 namespace clientAPP.ViewModels
@@ -28,7 +29,8 @@ namespace clientAPP.ViewModels
             set => SetProperty(ref _password, value);
         }
 
-        public Command LoginCommand { get; }
+        public ICommand LoginCommand { get; }
+        public ICommand RegisterCommand { get; }
 
         public LoginViewModel(IApiService apiService)
         {
@@ -36,6 +38,7 @@ namespace clientAPP.ViewModels
             Title = "Вход";
 
             LoginCommand = new Command(async () => await LoginAsync());
+            RegisterCommand = new Command(async () => await RegisterAsync());
         }
 
         private async Task LoginAsync()
@@ -52,14 +55,16 @@ namespace clientAPP.ViewModels
 
             try
             {
-                var success = await _apiService.LoginAsync(Email, Password);
-                if (success)
+                var result = await _apiService.LoginAsync(Email, Password);
+
+                if (!string.IsNullOrEmpty(result.Token))
                 {
+                    await Shell.Current.DisplayAlert("Успех", "Вход выполнен!", "OK");
                     await Shell.Current.GoToAsync("//MainPage");
                 }
                 else
                 {
-                    await Shell.Current.DisplayAlert("Ошибка", "Неверные данные", "OK");
+                    await Shell.Current.DisplayAlert("Ошибка", "Неверный email или пароль", "OK");
                 }
             }
             catch (Exception ex)
@@ -69,6 +74,49 @@ namespace clientAPP.ViewModels
             finally
             {
                 IsBusy = false;
+            }
+        }
+
+        private async Task RegisterAsync()
+        {
+            var username = await Shell.Current.DisplayPromptAsync(
+                "Регистрация",
+                "Введите имя пользователя:",
+                "Зарегистрировать",
+                "Отмена");
+
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+                {
+                    await Shell.Current.DisplayAlert("Ошибка", "Заполните email и пароль", "OK");
+                    return;
+                }
+
+                IsBusy = true;
+
+                try
+                {
+                    var result = await _apiService.RegisterAsync(username, Email, Password);
+
+                    if (!string.IsNullOrEmpty(result.Token))
+                    {
+                        await Shell.Current.DisplayAlert("Успех", "Регистрация выполнена!", "OK");
+                        await Shell.Current.GoToAsync("//MainPage");
+                    }
+                    else
+                    {
+                        await Shell.Current.DisplayAlert("Ошибка", "Ошибка регистрации", "OK");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    await Shell.Current.DisplayAlert("Ошибка", ex.Message, "OK");
+                }
+                finally
+                {
+                    IsBusy = false;
+                }
             }
         }
     }

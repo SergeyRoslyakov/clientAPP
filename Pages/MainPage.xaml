@@ -6,16 +6,41 @@
 
     <VerticalStackLayout Spacing="20" Padding="30">
 
-        <Label Text="Техно-ФИКС"
-               FontSize="28"
+        <!-- Информация о пользователе -->
+        <Frame BackgroundColor="{StaticResource Primary}"
+               CornerRadius="10"
+               Padding="15">
+            <VerticalStackLayout Spacing="10">
+                <Label Text="Techno-Fix"
+                       FontSize="24"
+                       FontAttributes="Bold"
+                       TextColor="White"/>
+
+                <Label Text="{Binding UserName}"
+                       FontSize="18"
+                       TextColor="White"/>
+
+                <Label Text="{Binding UserRole, StringFormat='Роль: {0}'}"
+                       FontSize="14"
+                       TextColor="White"/>
+            </VerticalStackLayout>
+        </Frame>
+
+        <Button Text="Выйти"
+                Command="{Binding LogoutCommand}"
+                BackgroundColor="{StaticResource Red}"
+                TextColor="White"
+                FontSize="16"
+                HeightRequest="50"/>
+
+        <!-- Меню -->
+        <Label Text="Меню"
+               FontSize="20"
                FontAttributes="Bold"
                HorizontalOptions="Center"/>
 
-        <Label Text="Главное меню"
-               FontSize="18"
-               HorizontalOptions="Center"/>
-
         <Button Text="👥 Клиенты"
+                Command="{Binding NavigateToClientsCommand}"
                 BackgroundColor="{StaticResource Primary}"
                 TextColor="White"
                 FontSize="16"
@@ -23,27 +48,7 @@
                 CornerRadius="10"/>
 
         <Button Text="💻 Устройства"
-                BackgroundColor="{StaticResource Secondary}"
-                TextColor="White"
-                FontSize="16"
-                HeightRequest="60"
-                CornerRadius="10"/>
-
-        <Button Text="🔧 Услуги"
-                BackgroundColor="{StaticResource Tertiary}"
-                TextColor="White"
-                FontSize="16"
-                HeightRequest="60"
-                CornerRadius="10"/>
-
-        <Button Text="👨‍🔧 Техники"
-                BackgroundColor="{StaticResource Primary}"
-                TextColor="White"
-                FontSize="16"
-                HeightRequest="60"
-                CornerRadius="10"/>
-
-        <Button Text="📋 Заказы"
+                Command="{Binding NavigateToDevicesCommand}"
                 BackgroundColor="{StaticResource Secondary}"
                 TextColor="White"
                 FontSize="16"
