@@ -15,5 +15,8 @@ namespace clientAPP.Services
         Task<DeviceModel> CreateDeviceAsync(CreateDeviceDto device);
         Task UpdateDeviceAsync(int id, UpdateDeviceDto device);
         Task DeleteDeviceAsync(int id);
+        Task<bool> LoginAsync(string email, string password);
+        void Logout();
+        Task<User> GetCurrentUserAsync();
     }
 }

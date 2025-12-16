@@ -11,7 +11,7 @@ namespace clientAPP.Services
     public class ApiService : IApiService
     {
         private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://localhost:7212/api/Techno-FIx";
+        private const string BaseUrl = "https://localhost:7212/api/Techno-Fix";
         private readonly JsonSerializerOptions _jsonOptions = new()
         {
             PropertyNameCaseInsensitive = true
@@ -49,9 +49,8 @@ namespace clientAPP.Services
 
                 return new List<DeviceModel>();
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"GetDevicesAsync error: {ex.Message}");
                 return new List<DeviceModel>();
             }
         }
@@ -71,9 +70,8 @@ namespace clientAPP.Services
 
                 return new DeviceModel();
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"GetDeviceAsync error: {ex.Message}");
                 return new DeviceModel();
             }
         }
@@ -93,9 +91,8 @@ namespace clientAPP.Services
 
                 return new DeviceModel();
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine($"CreateDeviceAsync error: {ex.Message}");
                 return new DeviceModel();
             }
         }
@@ -105,17 +102,9 @@ namespace clientAPP.Services
             try
             {
                 await SetAuthHeader();
-                var response = await _httpClient.PutAsJsonAsync($"{BaseUrl}/devices/{id}", device);
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Console.WriteLine($"UpdateDeviceAsync failed: {response.StatusCode}");
-                }
+                await _httpClient.PutAsJsonAsync($"{BaseUrl}/devices/{id}", device);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"UpdateDeviceAsync error: {ex.Message}");
-            }
+            catch { }
         }
 
         public async Task DeleteDeviceAsync(int id)
@@ -123,18 +112,47 @@ namespace clientAPP.Services
             try
             {
                 await SetAuthHeader();
-                var response = await _httpClient.DeleteAsync($"{BaseUrl}/devices/{id}");
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Console.WriteLine($"DeleteDeviceAsync failed: {response.StatusCode}");
-                }
+                await _httpClient.DeleteAsync($"{BaseUrl}/devices/{id}");
             }
-            catch (Exception ex)
+            catch { }
+        }
+        public async Task<bool> LoginAsync(string email, string password)
+        {
+            try
             {
-                Console.WriteLine($"DeleteDeviceAsync error: {ex.Message}");
+                var loginData = new { email, password };
+                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/auth/login", loginData);
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync();
+                    var jsonDoc = JsonDocument.Parse(json);
+
+                    if (jsonDoc.RootElement.TryGetProperty("token", out var tokenElement))
+                    {
+                        var token = tokenElement.GetString();
+                        await SecureStorage.SetAsync("auth_token", token);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
             }
         }
+
+        public void Logout()
+        {
+            SecureStorage.Remove("auth_token");
+        }
+
+        public async Task<Models.User> GetCurrentUserAsync()
+        {
+            return new Models.User();
+        }
+
         private async Task SetAuthHeader()
         {
             var token = await SecureStorage.GetAsync("auth_token");
