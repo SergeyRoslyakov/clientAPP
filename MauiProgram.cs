@@ -1,20 +1,36 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using clientAPP.Services;
+using clientAPP.ViewModels;
+using clientAPP.Pages;
+using Microsoft.Extensions.Logging;
 
-namespace clientAPP
+namespace clientAPP;
+
+public static class MauiProgram
 {
-    public static class MauiProgram
+    public static MauiApp CreateMauiApp()
     {
-        public static MauiApp CreateMauiApp()
-        {
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .ConfigureFonts(fonts =>
-                {
-                    fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                });
+        var builder = MauiApp.CreateBuilder();
+        builder
+            .UseMauiApp<App>()
+            .ConfigureFonts(fonts =>
+            {
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+            });
 
-            return builder.Build();
-        }
+#if DEBUG
+        builder.Logging.AddDebug();
+#endif
+
+        // Регистрация сервисов
+        builder.Services.AddSingleton<IApiService, ApiService>();
+
+        // Регистрация ViewModels
+        builder.Services.AddTransient<DevicesViewModel>();
+
+        // Регистрация страниц
+        builder.Services.AddTransient<DevicesPage>();
+
+        return builder.Build();
     }
 }

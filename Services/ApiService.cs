@@ -1,87 +1,125 @@
-﻿using clientAPP.DTO;
-using clientAPP.Models;
-using System.Collections.Generic;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
+﻿using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
+using clientAPP.Models;
+using clientAPP.DTO;
 
 namespace clientAPP.Services
 {
     public class ApiService : IApiService
     {
-        // Тестовые данные
-        private List<DeviceModel> _testDevices = new List<DeviceModel>
+        private readonly HttpClient _httpClient;
+        private readonly string _baseUrl = "https://localhost:7212/api"; // Базовый URL API
+        private readonly JsonSerializerOptions _jsonOptions = new JsonSerializerOptions
         {
-            new DeviceModel { Id = 1, Type = "Смартфон", Brand = "Apple", Model = "iPhone 15",
-                        SerialNumber = "ABC123", ProblemDescription = "Не заряжается", ClientId = 1, ClientName = "Иванов И." },
-            new DeviceModel { Id = 2, Type = "Ноутбук", Brand = "Dell", Model = "XPS 13",
-                        SerialNumber = "XYZ789", ProblemDescription = "Не включается", ClientId = 2, ClientName = "Петров П." },
-            new DeviceModel { Id = 3, Type = "Планшет", Brand = "Samsung", Model = "Galaxy Tab S9",
-                        SerialNumber = "DEF456", ProblemDescription = "Разбит экран", ClientId = 1, ClientName = "Иванов И." }
+            PropertyNameCaseInsensitive = true,
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
         };
+
+        public ApiService()
+        {
+            // Настраиваем HttpClient для работы с самоподписанным сертификатом
+            var handler = new HttpClientHandler
+            {
+                ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => true
+            };
+
+            _httpClient = new HttpClient(handler);
+            _httpClient.BaseAddress = new Uri(_baseUrl);
+            _httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+        }
 
         public async Task<List<DeviceModel>> GetDevicesAsync(string search = null)
         {
-            await Task.Delay(500);
+            try
+            {
+                var url = "/Device";
+                if (!string.IsNullOrEmpty(search))
+                {
+                    url += $"?search={Uri.EscapeDataString(search)}";
+                }
 
-            if (string.IsNullOrEmpty(search))
-                return _testDevices;
+                var response = await _httpClient.GetAsync(url);
+                response.EnsureSuccessStatusCode();
 
-            return _testDevices.Where(d =>
-                d.Type.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                d.Brand.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                d.Model.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                d.SerialNumber.Contains(search, StringComparison.OrdinalIgnoreCase)
-            ).ToList();
+                var content = await response.Content.ReadAsStringAsync();
+                var devices = JsonSerializer.Deserialize<List<DeviceModel>>(content, _jsonOptions);
+                return devices ?? new List<DeviceModel>();
+            }
+            catch (HttpRequestException ex)
+            {
+                // Логируем ошибку
+                Console.WriteLine($"Ошибка при получении устройств: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<DeviceModel> GetDeviceAsync(int id)
         {
-            await Task.Delay(300);
-            return _testDevices.FirstOrDefault(d => d.Id == id) ?? new DeviceModel();
+            try
+            {
+                var response = await _httpClient.GetAsync($"/Device/{id}");
+                response.EnsureSuccessStatusCode();
+
+                var content = await response.Content.ReadAsStringAsync();
+                var device = JsonSerializer.Deserialize<DeviceModel>(content, _jsonOptions);
+                return device ?? new DeviceModel();
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Ошибка при получении устройства {id}: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task<DeviceModel> CreateDeviceAsync(CreateDeviceDto device)
         {
-            await Task.Delay(500);
-            var newDevice = new DeviceModel
+            try
             {
-                Id = _testDevices.Count + 1,
-                Type = device.Type,
-                Brand = device.Brand,
-                Model = device.Model,
-                SerialNumber = device.SerialNumber,
-                ProblemDescription = device.ProblemDescription,
-                ClientId = device.ClientId,
-                ClientName = $"Клиент {device.ClientId}"
-            };
+                var json = JsonSerializer.Serialize(device, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
 
-            _testDevices.Add(newDevice);
-            return newDevice;
+                var response = await _httpClient.PostAsync("/Device", content);
+                response.EnsureSuccessStatusCode();
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<DeviceModel>(responseContent, _jsonOptions) ?? new DeviceModel();
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Ошибка при создании устройства: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task UpdateDeviceAsync(int id, UpdateDeviceDto device)
         {
-            await Task.Delay(500);
-            var existing = _testDevices.FirstOrDefault(d => d.Id == id);
-            if (existing != null)
+            try
             {
-                existing.Type = device.Type;
-                existing.Brand = device.Brand;
-                existing.Model = device.Model;
-                existing.SerialNumber = device.SerialNumber;
-                existing.ProblemDescription = device.ProblemDescription;
-                existing.ClientId = device.ClientId;
+                var json = JsonSerializer.Serialize(device, _jsonOptions);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PutAsync($"/Device/{id}", content);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Ошибка при обновлении устройства {id}: {ex.Message}");
+                throw;
             }
         }
 
         public async Task DeleteDeviceAsync(int id)
         {
-            await Task.Delay(500);
-            var device = _testDevices.FirstOrDefault(d => d.Id == id);
-            if (device != null)
-                _testDevices.Remove(device);
+            try
+            {
+                var response = await _httpClient.DeleteAsync($"/Device/{id}");
+                response.EnsureSuccessStatusCode();
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Ошибка при удалении устройства {id}: {ex.Message}");
+                throw;
+            }
         }
     }
 }
