@@ -26,9 +26,11 @@ public static class MauiProgram
         builder.Services.AddSingleton<IApiService, ApiService>();
 
         // Регистрация ViewModels
+        builder.Services.AddTransient<LoginViewModel>();
         builder.Services.AddTransient<DevicesViewModel>();
 
         // Регистрация страниц
+        builder.Services.AddTransient<LoginPage>();
         builder.Services.AddTransient<DevicesPage>();
 
         return builder.Build();

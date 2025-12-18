@@ -13,8 +13,8 @@ namespace clientAPP
         public App()
         {
             InitializeComponent();
-            // Напрямую переходим на DevicesPage
-            MainPage = new DevicesPage();
+
+            MainPage = new NavigationPage(new Pages.LoginPage());
         }
     }
 }

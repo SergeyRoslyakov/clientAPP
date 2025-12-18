@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+       xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+       xmlns:pages="clr-namespace:clientAPP.Pages"
+       x:Class="clientAPP.AppShell"
+       Title="clientAPP">
+
+    <ShellContent Route="login"
+                  ContentTemplate="{DataTemplate pages:LoginPage}"
+                  Title="Вход"/>
+
+    <ShellContent Route="devices"
+                  ContentTemplate="{DataTemplate pages:DevicesPage}"
+                  Title="Устройства"/>
+
+</Shell>

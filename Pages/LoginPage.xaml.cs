@@ -1,5 +1,6 @@
 using clientAPP.ViewModels;
 using Microsoft.Extensions.DependencyInjection;
+using clientAPP.Services;
 
 namespace clientAPP.Pages
 {
@@ -8,6 +9,9 @@ namespace clientAPP.Pages
         public LoginPage()
         {
             InitializeComponent();
+
+            var apiService = new ApiService();
+            BindingContext = new LoginViewModel(apiService);
         }
     }
 }

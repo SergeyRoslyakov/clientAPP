@@ -10,9 +10,24 @@ namespace clientAPP.Pages
         {
             InitializeComponent();
 
-            // Создаем ViewModel вручную
             var apiService = new ApiService();
-            BindingContext = new DevicesViewModel(apiService);
+
+            Task.Run(async () =>
+            {
+                var isAuth = await apiService.IsAuthenticated();
+                if (!isAuth)
+                {
+                    await Shell.Current.GoToAsync("//login");
+                }
+                else
+                {
+                    // Авторизован, загружаем устройства
+                    Device.BeginInvokeOnMainThread(() =>
+                    {
+                        BindingContext = new DevicesViewModel(apiService);
+                    });
+                }
+            });
         }
     }
 }
