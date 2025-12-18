@@ -1,10 +1,13 @@
 using clientAPP.ViewModels;
-namespace clientAPP.Pages;
+using Microsoft.Extensions.DependencyInjection;
 
-public partial class LoginPage : ContentPage
+namespace clientAPP.Pages
 {
-    public LoginPage()
+    public partial class LoginPage : ContentPage
     {
-        InitializeComponent();
+        public LoginPage()
+        {
+            InitializeComponent();
+        }
     }
 }

@@ -10,240 +10,78 @@ namespace clientAPP.Services
 {
     public class ApiService : IApiService
     {
-        private readonly HttpClient _httpClient;
-        private const string BaseUrl = "https://localhost:7212/api";
-        private readonly JsonSerializerOptions _jsonOptions = new()
+        // Тестовые данные
+        private List<DeviceModel> _testDevices = new List<DeviceModel>
         {
-            PropertyNameCaseInsensitive = true
+            new DeviceModel { Id = 1, Type = "Смартфон", Brand = "Apple", Model = "iPhone 15",
+                        SerialNumber = "ABC123", ProblemDescription = "Не заряжается", ClientId = 1, ClientName = "Иванов И." },
+            new DeviceModel { Id = 2, Type = "Ноутбук", Brand = "Dell", Model = "XPS 13",
+                        SerialNumber = "XYZ789", ProblemDescription = "Не включается", ClientId = 2, ClientName = "Петров П." },
+            new DeviceModel { Id = 3, Type = "Планшет", Brand = "Samsung", Model = "Galaxy Tab S9",
+                        SerialNumber = "DEF456", ProblemDescription = "Разбит экран", ClientId = 1, ClientName = "Иванов И." }
         };
 
-        public ApiService()
-        {
-            _httpClient = new HttpClient
-            {
-                BaseAddress = new Uri(BaseUrl)
-            };
-            _httpClient.DefaultRequestHeaders.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
-        }
-
-        // Аутентификация
-        public async Task<AuthResponseDto> LoginAsync(string email, string password)
-        {
-            try
-            {
-                var loginDto = new LoginRequestDto { Email = email, Password = password };
-                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/auth/login", loginDto);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    var authResponse = await response.Content.ReadFromJsonAsync<AuthResponseDto>(_jsonOptions);
-
-                    if (authResponse != null && !string.IsNullOrEmpty(authResponse.Token))
-                    {
-                        // Сохраняем токен и данные пользователя
-                        await SecureStorage.SetAsync("auth_token", authResponse.Token);
-                        await SecureStorage.SetAsync("user_email", authResponse.User.Email);
-                        await SecureStorage.SetAsync("user_role", authResponse.User.Role);
-                        await SecureStorage.SetAsync("user_name", authResponse.User.Username);
-
-                        return authResponse;
-                    }
-                }
-
-                // Если ошибка, возвращаем пустой объект
-                return new AuthResponseDto();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Login error: {ex.Message}");
-                return new AuthResponseDto();
-            }
-        }
-
-        public async Task<AuthResponseDto> RegisterAsync(string username, string email, string password, string role = "User")
-        {
-            try
-            {
-                var registerDto = new RegisterRequestDto
-                {
-                    Username = username,
-                    Email = email,
-                    Password = password,
-                    Role = role
-                };
-
-                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/auth/register", registerDto);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<AuthResponseDto>(_jsonOptions)
-                        ?? new AuthResponseDto();
-                }
-
-                return new AuthResponseDto();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Register error: {ex.Message}");
-                return new AuthResponseDto();
-            }
-        }
-
-        public async Task<User> GetCurrentUserAsync()
-        {
-            try
-            {
-                var token = await SecureStorage.GetAsync("auth_token");
-                var email = await SecureStorage.GetAsync("user_email");
-                var role = await SecureStorage.GetAsync("user_role");
-                var name = await SecureStorage.GetAsync("user_name");
-
-                if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(email))
-                {
-                    return new User
-                    {
-                        Email = email,
-                        Role = role ?? "User",
-                        Username = name ?? "Пользователь"
-                    };
-                }
-
-                return new User();
-            }
-            catch
-            {
-                return new User();
-            }
-        }
-
-        public async Task<bool> IsAuthenticatedAsync()
-        {
-            var token = await SecureStorage.GetAsync("auth_token");
-            return !string.IsNullOrEmpty(token);
-        }
-
-        public void Logout()
-        {
-            try
-            {
-                SecureStorage.Remove("auth_token");
-                SecureStorage.Remove("user_email");
-                SecureStorage.Remove("user_role");
-                SecureStorage.Remove("user_name");
-            }
-            catch { }
-        }
-
-        // Устройства (с авторизацией)
         public async Task<List<DeviceModel>> GetDevicesAsync(string search = null)
         {
-            try
-            {
-                await SetAuthHeader();
+            await Task.Delay(500);
 
-                string url = $"{BaseUrl}/devices";
-                if (!string.IsNullOrEmpty(search))
-                {
-                    url += $"?search={Uri.EscapeDataString(search)}";
-                }
+            if (string.IsNullOrEmpty(search))
+                return _testDevices;
 
-                var response = await _httpClient.GetAsync(url);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<List<DeviceModel>>(_jsonOptions)
-                        ?? new List<DeviceModel>();
-                }
-                else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
-                {
-                    // Если не авторизован
-                    await Shell.Current.DisplayAlert("Ошибка", "Требуется авторизация", "OK");
-                }
-
-                return new List<DeviceModel>();
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"GetDevices error: {ex.Message}");
-                return new List<DeviceModel>();
-            }
+            return _testDevices.Where(d =>
+                d.Type.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                d.Brand.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                d.Model.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                d.SerialNumber.Contains(search, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
         }
 
         public async Task<DeviceModel> GetDeviceAsync(int id)
         {
-            try
-            {
-                await SetAuthHeader();
-                var response = await _httpClient.GetAsync($"{BaseUrl}/devices/{id}");
-
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<DeviceModel>(_jsonOptions)
-                        ?? new DeviceModel();
-                }
-
-                return new DeviceModel();
-            }
-            catch
-            {
-                return new DeviceModel();
-            }
+            await Task.Delay(300);
+            return _testDevices.FirstOrDefault(d => d.Id == id) ?? new DeviceModel();
         }
 
         public async Task<DeviceModel> CreateDeviceAsync(CreateDeviceDto device)
         {
-            try
+            await Task.Delay(500);
+            var newDevice = new DeviceModel
             {
-                await SetAuthHeader();
-                var response = await _httpClient.PostAsJsonAsync($"{BaseUrl}/devices", device);
+                Id = _testDevices.Count + 1,
+                Type = device.Type,
+                Brand = device.Brand,
+                Model = device.Model,
+                SerialNumber = device.SerialNumber,
+                ProblemDescription = device.ProblemDescription,
+                ClientId = device.ClientId,
+                ClientName = $"Клиент {device.ClientId}"
+            };
 
-                if (response.IsSuccessStatusCode)
-                {
-                    return await response.Content.ReadFromJsonAsync<DeviceModel>(_jsonOptions)
-                        ?? new DeviceModel();
-                }
-
-                return new DeviceModel();
-            }
-            catch
-            {
-                return new DeviceModel();
-            }
+            _testDevices.Add(newDevice);
+            return newDevice;
         }
 
         public async Task UpdateDeviceAsync(int id, UpdateDeviceDto device)
         {
-            try
+            await Task.Delay(500);
+            var existing = _testDevices.FirstOrDefault(d => d.Id == id);
+            if (existing != null)
             {
-                await SetAuthHeader();
-                await _httpClient.PutAsJsonAsync($"{BaseUrl}/devices/{id}", device);
+                existing.Type = device.Type;
+                existing.Brand = device.Brand;
+                existing.Model = device.Model;
+                existing.SerialNumber = device.SerialNumber;
+                existing.ProblemDescription = device.ProblemDescription;
+                existing.ClientId = device.ClientId;
             }
-            catch { }
         }
 
         public async Task DeleteDeviceAsync(int id)
         {
-            try
-            {
-                await SetAuthHeader();
-                await _httpClient.DeleteAsync($"{BaseUrl}/devices/{id}");
-            }
-            catch { }
-        }
-
-        private async Task SetAuthHeader()
-        {
-            var token = await SecureStorage.GetAsync("auth_token");
-            if (!string.IsNullOrEmpty(token))
-            {
-                _httpClient.DefaultRequestHeaders.Authorization =
-                    new AuthenticationHeaderValue("Bearer", token);
-            }
-            else
-            {
-                _httpClient.DefaultRequestHeaders.Authorization = null;
-            }
+            await Task.Delay(500);
+            var device = _testDevices.FirstOrDefault(d => d.Id == id);
+            if (device != null)
+                _testDevices.Remove(device);
         }
     }
 }

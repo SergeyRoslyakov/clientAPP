@@ -1,0 +1,108 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:viewmodels="clr-namespace:clientAPP.Pages"
+             x:Class="clientAPP.Pages.DevicesPage"
+             Title="Устройства">
+
+    <Grid RowDefinitions="Auto, Auto, *">
+
+        <!-- Поиск -->
+        <Frame Grid.Row="0" Padding="10" BackgroundColor="#F5F5F5">
+            <Entry Placeholder="Поиск устройств..." 
+                   Text="{Binding SearchText}"
+                   HorizontalOptions="FillAndExpand"/>
+        </Frame>
+
+        <!-- Кнопки действий -->
+        <StackLayout Grid.Row="1" Orientation="Horizontal" Spacing="10" Padding="10">
+            <Button Text="➕ Добавить" 
+                    Command="{Binding AddDeviceCommand}"
+                    BackgroundColor="#4CAF50"
+                    TextColor="White"
+                    CornerRadius="5"/>
+
+            <Button Text="🔄 Обновить" 
+                    Command="{Binding RefreshCommand}"
+                    BackgroundColor="#2196F3"
+                    TextColor="White"
+                    CornerRadius="5"/>
+        </StackLayout>
+
+        <!-- Список устройств -->
+        <CollectionView Grid.Row="2" 
+                        ItemsSource="{Binding FilteredDevices}"
+                        SelectionMode="Single"
+                        SelectedItem="{Binding SelectedDevice}">
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate>
+                    <Frame Margin="10,5" Padding="15" CornerRadius="10" BackgroundColor="#F9F9F9">
+                        <Grid ColumnDefinitions="Auto, *, Auto" RowDefinitions="Auto, Auto, Auto, Auto">
+
+                            <!-- Иконка -->
+                            <Label Grid.Column="0" Grid.RowSpan="4" 
+                                   Text="💻" FontSize="30" 
+                                   VerticalOptions="Center" Margin="0,0,10,0"/>
+
+                            <!-- Основная информация -->
+                            <Label Grid.Column="1" Grid.Row="0"
+                                   Text="{Binding Brand}"
+                                   FontAttributes="Bold"
+                                   FontSize="16"/>
+
+                            <Label Grid.Column="1" Grid.Row="1"
+                                   Text="{Binding Model}"
+                                   FontSize="14"/>
+
+                            <Label Grid.Column="1" Grid.Row="2"
+                                   Text="{Binding Type}"
+                                   FontSize="12"
+                                   TextColor="#666"/>
+
+                            <Label Grid.Column="1" Grid.Row="3"
+                                   Text="{Binding ProblemDescription}"
+                                   FontSize="12"
+                                   TextColor="#F44336"/>
+
+                            <!-- Серийный номер -->
+                            <Label Grid.Column="2" Grid.Row="0"
+                                   Text="{Binding SerialNumber}"
+                                   FontSize="12"
+                                   TextColor="#666"
+                                   HorizontalOptions="End"/>
+
+                            <!-- Кнопки действий -->
+                            <StackLayout Grid.Column="2" Grid.Row="2" Grid.RowSpan="2" 
+                                         Orientation="Horizontal" Spacing="5">
+                                <Button Text="✏️" 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.EditDeviceCommand}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="Transparent"
+                                        FontSize="12"/>
+
+                                <Button Text="🗑️" 
+                                        Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.DeleteDeviceCommand}"
+                                        CommandParameter="{Binding .}"
+                                        BackgroundColor="Transparent"
+                                        TextColor="#F44336"
+                                        FontSize="12"/>
+                            </StackLayout>
+
+                        </Grid>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+        </CollectionView>
+
+        <!-- Индикатор загрузки -->
+        <ActivityIndicator Grid.RowSpan="3"
+                           IsRunning="{Binding IsBusy}"
+                           IsVisible="{Binding IsBusy}"
+                           Color="#2196F3"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"/>
+
+    </Grid>
+
+</ContentPage>

@@ -11,112 +11,50 @@ using System.Windows.Input;
 
 namespace clientAPP.ViewModels
 {
-    public class LoginViewModel : BaseViewModel
+    using System.Windows.Input;
+
+    namespace clientAPP.ViewModels
     {
-        private readonly IApiService _apiService;
-        private string _email = string.Empty;
-        private string _password = string.Empty;
-
-        public string Email
+        public class LoginViewModel : BaseViewModel
         {
-            get => _email;
-            set => SetProperty(ref _email, value);
-        }
+            private string _email = string.Empty;
+            private string _password = string.Empty;
 
-        public string Password
-        {
-            get => _password;
-            set => SetProperty(ref _password, value);
-        }
-
-        public ICommand LoginCommand { get; }
-        public ICommand RegisterCommand { get; }
-
-        public LoginViewModel(IApiService apiService)
-        {
-            _apiService = apiService;
-            Title = "Вход";
-
-            LoginCommand = new Command(async () => await LoginAsync());
-            RegisterCommand = new Command(async () => await RegisterAsync());
-        }
-
-        private async Task LoginAsync()
-        {
-            if (IsBusy) return;
-
-            if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+            public string Email
             {
-                await Shell.Current.DisplayAlert("Ошибка", "Заполните все поля", "OK");
-                return;
+                get => _email;
+                set => SetProperty(ref _email, value);
             }
 
-            IsBusy = true;
-
-            try
+            public string Password
             {
-                var result = await _apiService.LoginAsync(Email, Password);
-
-                if (!string.IsNullOrEmpty(result.Token))
-                {
-                    await Shell.Current.DisplayAlert("Успех", "Вход выполнен!", "OK");
-                    await Shell.Current.GoToAsync("//MainPage");
-                }
-                else
-                {
-                    await Shell.Current.DisplayAlert("Ошибка", "Неверный email или пароль", "OK");
-                }
+                get => _password;
+                set => SetProperty(ref _password, value);
             }
-            catch (Exception ex)
+
+            public ICommand LoginCommand { get; }
+            public ICommand TestNavigationCommand { get; }
+
+            public LoginViewModel()
             {
-                await Shell.Current.DisplayAlert("Ошибка", ex.Message, "OK");
-            }
-            finally
-            {
-                IsBusy = false;
-            }
-        }
+                System.Diagnostics.Debug.WriteLine("LoginViewModel created");
+                Title = "Вход";
 
-        private async Task RegisterAsync()
-        {
-            var username = await Shell.Current.DisplayPromptAsync(
-                "Регистрация",
-                "Введите имя пользователя:",
-                "Зарегистрировать",
-                "Отмена");
-
-            if (!string.IsNullOrWhiteSpace(username))
-            {
-                if (string.IsNullOrWhiteSpace(Email) || string.IsNullOrWhiteSpace(Password))
+                // Команда для входа
+                LoginCommand = new Command(async () =>
                 {
-                    await Shell.Current.DisplayAlert("Ошибка", "Заполните email и пароль", "OK");
-                    return;
-                }
+                    await Shell.Current.DisplayAlert("Вход", "Авторизация прошла успешно!", "OK");
 
-                IsBusy = true;
+                    // Просто заменяем MainPage приложения
+                    App.Current.MainPage = new Pages.MainPage();
+                });
 
-                try
+                // Отдельная команда для теста навигации
+                TestNavigationCommand = new Command(async () =>
                 {
-                    var result = await _apiService.RegisterAsync(username, Email, Password);
-
-                    if (!string.IsNullOrEmpty(result.Token))
-                    {
-                        await Shell.Current.DisplayAlert("Успех", "Регистрация выполнена!", "OK");
-                        await Shell.Current.GoToAsync("//MainPage");
-                    }
-                    else
-                    {
-                        await Shell.Current.DisplayAlert("Ошибка", "Ошибка регистрации", "OK");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    await Shell.Current.DisplayAlert("Ошибка", ex.Message, "OK");
-                }
-                finally
-                {
-                    IsBusy = false;
-                }
+                    // Этот вариант всегда работает
+                    await Shell.Current.GoToAsync(nameof(Pages.MainPage));
+                });
             }
         }
     }
